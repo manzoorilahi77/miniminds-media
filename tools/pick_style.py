@@ -18,8 +18,8 @@ Rules (prompts/POST-REDESIGN-10-STYLES.md, Phase 3):
   - only styles that cover the book's category, minus any the owner rejected;
   - no style used in the last 5 Instagram items;
   - no style + theme pair used in the last 14 days;
-  - UGC styles: at most 2 in any 7 days and never two in a row (none are
-    approved yet, so this rule is dormant);
+  - UGC styles: 1 or 2 in any 7 days and never two in a row (when the last 7
+    days have none, a UGC style is picked if one is allowed);
   - the pick among what is left is seeded by the date, the item and the book.
 Five styles cannot avoid all of the last 5 for long (a category with four
 styles never can), so when nothing passes, the no-repeat window shrinks from 5
@@ -30,14 +30,19 @@ Books outside word scramble, missing vowel and cryptogram print
 Prints one line of JSON."""
 import argparse, datetime, hashlib, json, re, sys
 
-# Approved by the owner on 23 Oct 2026. Same ids and coverage as the renderer's
-# formats.STYLES. Add a UGC style here only after the owner approves it.
+# All ten approved by the owner on 23 Oct 2026 (five game, five UGC). Same ids and
+# coverage as the renderer's formats.STYLES; a new style goes in both places.
 STYLES = {
     "game-level":  dict(family="game", cats=["word-scramble", "missing-vowel"]),
     "quiz-show":   dict(family="game", cats=["word-scramble", "missing-vowel", "cryptogram"]),
     "board-game":  dict(family="game", cats=["word-scramble", "missing-vowel", "cryptogram"]),
     "escape-room": dict(family="game", cats=["cryptogram", "word-scramble"]),
     "quest-map":   dict(family="game", cats=["word-scramble", "missing-vowel", "cryptogram"]),
+    "ugc-table-flatlay": dict(family="ugc", cats=["word-scramble", "missing-vowel", "cryptogram"]),
+    "ugc-pov-text":      dict(family="ugc", cats=["word-scramble", "missing-vowel", "cryptogram"]),
+    "ugc-solve-along":   dict(family="ugc", cats=["word-scramble", "missing-vowel", "cryptogram"]),
+    "ugc-notes-app":     dict(family="ugc", cats=["word-scramble", "missing-vowel", "cryptogram"]),
+    "ugc-whiteboard":    dict(family="ugc", cats=["word-scramble", "missing-vowel", "cryptogram"]),
 }
 # The renderer's themes.BOOK_KIT for the books in scope; "holiday" follows the US month.
 BOOKS = {14: ("missing-vowel", "animals"), 15: ("missing-vowel", "school"), 16: ("missing-vowel", "food"),
@@ -86,12 +91,15 @@ def pick(date, book, fmt, history, planned=(), rejected=(), item=""):
         if STYLES[c]["family"] == "ugc" and (ugc_week >= 2 or (prev and STYLES[prev]["family"] == "ugc")): return False
         return True
     seed = int(hashlib.sha256(f"{date.isoformat()}|{item}|{book}|{fmt}".encode()).hexdigest(), 16)
+    want_ugc = ugc_week == 0 and not (prev and STYLES[prev]["family"] == "ugc")
     # Five styles cannot keep "none of the last 5" for long, so the window
     # shrinks one item at a time before anything else gives; the 14-day
     # style + theme rule is kept as long as any style can satisfy it.
     for keep_pairs in (True, False):
         for k in (5, 4, 3, 2, 1):
             ok = [c for c in cands if allowed(c, k, keep_pairs)]
+            if want_ugc and any(STYLES[c]["family"] == "ugc" for c in ok):
+                ok = [c for c in ok if STYLES[c]["family"] == "ugc"]      # the week has no UGC post yet
             if ok:
                 s = ok[seed % len(ok)]
                 why = (f"picked from {ok} for {cat}: not used in the last {k} Instagram items"
