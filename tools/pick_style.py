@@ -25,10 +25,14 @@ Five styles cannot avoid all of the last 5 for long (a category with four
 styles never can), so when nothing passes, the no-repeat window shrinks from 5
 to 4, 3, 2 and 1 items before the 14-day style + theme rule is relaxed. The
 output says which rule gave.
+The "line" it prints now also carries "mockup=true, word=<WORD>": the book mockup goes on every frame and
+the day's comment word (pick_word.py) is the one the posts ask for.
 Books outside word scramble, missing vowel and cryptogram print
 {"style": null}: they keep today's poster-studio templates.
 Prints one line of JSON."""
-import argparse, datetime, hashlib, json, re, sys
+import os, argparse, datetime, hashlib, json, re, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pick_word import word_for                      # the comment word of the day (27 Oct 2026)
 
 # All ten approved by the owner on 23 Oct 2026 (five game, five UGC). Same ids and
 # coverage as the renderer's formats.STYLES; a new style goes in both places.
@@ -113,8 +117,9 @@ def pick(date, book, fmt, history, planned=(), rejected=(), item=""):
         age = {c: max([i for i, x in enumerate(styled) if x == c] or [-1]) for c in cands}
         s = min(cands, key=lambda c: (age[c], c))
         why = f"only one style is left for {cat}, so it repeats ({s})"
-    return dict(style=s, theme=theme, category=cat,
-                line=f"TO RENDER (poster studio): style={s}, theme={theme}, format={fmt}, book_id={book}, ", why=why)
+    word = word_for(date)
+    return dict(style=s, theme=theme, category=cat, word=word,
+                line=f"TO RENDER (poster studio): style={s}, theme={theme}, format={fmt}, book_id={book}, mockup=true, word={word}, ", why=why)
 
 def main():
     ap = argparse.ArgumentParser()
